@@ -44,6 +44,8 @@ class FusionEKF {
   Eigen::MatrixXd R_radar_;
   Eigen::MatrixXd H_laser_;
   Eigen::MatrixXd Hj_;
+    
+  static void PolarToCartesian(Eigen::VectorXd& result, const MeasurementPackage &measurement_pack);
 };
 
 #endif // FusionEKF_H_
