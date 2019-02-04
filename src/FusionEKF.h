@@ -30,6 +30,9 @@ class FusionEKF {
    * Kalman Filter update and prediction math lives in here.
    */
   KalmanFilter ekf_;
+  
+  static void PolarToCartesian(Eigen::VectorXd& result, const MeasurementPackage &measurement_pack);
+  static void CartesianToPolar(Eigen::VectorXd& result, const Eigen::VectorXd& input);
 
  private:
   // check whether the tracking toolbox was initialized or not (first measurement)
@@ -44,8 +47,7 @@ class FusionEKF {
   Eigen::MatrixXd R_radar_;
   Eigen::MatrixXd H_laser_;
   Eigen::MatrixXd Hj_;
-    
-  static void PolarToCartesian(Eigen::VectorXd& result, const MeasurementPackage &measurement_pack);
+  Tools tools_;
 };
 
 #endif // FusionEKF_H_

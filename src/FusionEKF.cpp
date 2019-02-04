@@ -32,6 +32,9 @@ FusionEKF::FusionEKF() {
               0, 0.0009, 0,
               0, 0, 0.09;
 
+  H_laser_ << 1, 0, 0, 0,
+             0, 1, 0, 0;
+  
   /**
    * TODO: Finish initializing the FusionEKF.
    * TODO: Set the process and measurement noises
@@ -65,7 +68,13 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     cout << "EKF: " << endl;
     ekf_.x_ = VectorXd(4);
     ekf_.x_ << 1, 1, 1, 1;
-
+    
+    ekf_.P_ = MatrixXd(4, 4);
+    ekf_.P_ << 1, 0, 0, 0,
+              0, 1, 0, 0,
+              0, 0, 1000, 0,
+              0, 0, 0, 1000;
+    
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       // TODO: Convert radar from polar to cartesian coordinates 
       //         and initialize state.
@@ -95,7 +104,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
    */
   
-  float dt = (measurement_pack.timestamp_ - previous_timestamp_);
+  float dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;
   float dt_2 = dt * dt;
   float dt_3 = dt_2 * dt;
   float dt_4 = dt_3 * dt;
@@ -111,8 +120,12 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
              dt_3/2*noise_ax, 0, dt_2*noise_ax, 0,
              0, dt_3/2*noise_ay, 0, dt_2*noise_ay;
   
+  std::cout<<"Timestamp: "<<measurement_pack.timestamp_<<std::endl;
+  std::cout<<"Before Predict: X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl;
   ekf_.Predict();
-
+  std::cout<<"After Predict: X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl;
+  
+  
   /**
    * Update
    */
@@ -123,23 +136,29 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    * - Update the state and covariance matrices.
    */
 
-  Eigen::VectorXd z = VectorXd(4);
+  //Eigen::VectorXd z = VectorXd(4);
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
-    FusionEKF::PolarToCartesian(z, measurement_pack);
-    ekf_.UpdateEKF(z);
+    ekf_.H_ = tools.CalculateJacobian(ekf_.x_);
+    ekf_.R_ = R_radar_;
+    
+    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
 
   } else {
-    // TODO: Should the velocity be simply taken from x?
-    z<<measurement_pack.raw_measurements_[0],measurement_pack.raw_measurements_[1],0.0,0.0;
-    ekf_.Update(z);
+    ekf_.H_ = H_laser_;
+    ekf_.R_ = R_laser_;
+    
+    ekf_.Update(measurement_pack.raw_measurements_);
 
   }
-
+  
+  std::cout<<"After Update: X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl;
+  std::cout<<"==========="<<std::endl;
+  
   previous_timestamp_ = measurement_pack.timestamp_;
   
   // print the output
-  cout << "x_ = " << ekf_.x_ << endl;
-  cout << "P_ = " << ekf_.P_ << endl;
+  //cout << "x_ = " << ekf_.x_ << endl;
+  //cout << "P_ = " << ekf_.P_ << endl;
 }
 
 void FusionEKF::PolarToCartesian(Eigen::VectorXd& result, const MeasurementPackage &measurement_pack) {
@@ -152,4 +171,26 @@ void FusionEKF::PolarToCartesian(Eigen::VectorXd& result, const MeasurementPacka
   float vx = ro_dot*cos(theta);
   float vy = -ro_dot*sin(theta);
   result << px, py, vx, vy;
+}
+
+void FusionEKF::CartesianToPolar(Eigen::VectorXd& result, const Eigen::VectorXd& input) {
+  float px = input[0];
+  float py = input[1];
+  float vx = input[2];
+  float vy = input[3];
+
+  float ro = sqrt(px*px + py*py);
+  float theta = atan(py/px);
+  
+  while (theta > M_PI) {
+    theta -= M_PI;
+  }
+  
+  while(theta < -M_PI) {
+    theta += M_PI;
+  }
+  
+  float ro_dot = (px*vx+py*vy)/ro;
+
+  result << ro,theta,ro_dot;
 }
