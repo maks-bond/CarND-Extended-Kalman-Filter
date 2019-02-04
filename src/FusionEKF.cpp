@@ -89,6 +89,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     // done initializing, no need to predict or update
     is_initialized_ = true;
     previous_timestamp_ = measurement_pack.timestamp_;
+    timestep_ = 1;
     
     return;
   }
@@ -120,10 +121,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
              dt_3/2*noise_ax, 0, dt_2*noise_ax, 0,
              0, dt_3/2*noise_ay, 0, dt_2*noise_ay;
   
-  std::cout<<"Timestamp: "<<measurement_pack.timestamp_<<std::endl;
-  std::cout<<"Before Predict: X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl;
+  std::cout<<"Time step: "<<timestep_<<(measurement_pack.sensor_type_ == MeasurementPackage::RADAR?" RADAR":" LIDAR")<<std::endl;
+  std::cout<<"Before Predict: "<<std::endl<<"X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl<<std::endl;
   ekf_.Predict();
-  std::cout<<"After Predict: X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl;
+  std::cout<<"After Predict: "<<std::endl<<"X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl<<std::endl;
   
   
   /**
@@ -151,11 +152,11 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   }
   
-  std::cout<<"After Update: X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl;
+  std::cout<<"After Update: "<<std::endl<<"X: "<<ekf_.x_<<std::endl<<"P: "<<ekf_.P_<<std::endl;
   std::cout<<"==========="<<std::endl;
   
   previous_timestamp_ = measurement_pack.timestamp_;
-  
+  timestep_++;
   // print the output
   //cout << "x_ = " << ekf_.x_ << endl;
   //cout << "P_ = " << ekf_.P_ << endl;
@@ -180,7 +181,7 @@ void FusionEKF::CartesianToPolar(Eigen::VectorXd& result, const Eigen::VectorXd&
   float vy = input[3];
 
   float ro = sqrt(px*px + py*py);
-  float theta = atan(py/px);
+  float theta = atan2(py,px);
   
   while (theta > M_PI) {
     theta -= M_PI;
