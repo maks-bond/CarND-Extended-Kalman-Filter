@@ -24,49 +24,36 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
   Q_ = Q_in;
 }
 
+// Predict step of kalman filter.
 void KalmanFilter::Predict() {
-  /**
-   * TODO: predict the state
-   */
   x_ = F_ * x_;
   MatrixXd Ft = F_.transpose();
   P_ = F_ * P_ * Ft + Q_;
 }
 
+// Update step of kalman filter.
+// Input measurement is in cartesian coordinate system
 void KalmanFilter::Update(const VectorXd &z) {
-  /**
-   * TODO: update the state by using Kalman Filter equations
-   */
   VectorXd z_pred = H_ * x_;
   VectorXd y = z - z_pred;
-  MatrixXd Ht = H_.transpose();
-  MatrixXd S = H_ * P_ * Ht + R_;
-  MatrixXd Si = S.inverse();
-  MatrixXd PHt = P_ * Ht;
-  MatrixXd K = PHt * Si;
-  
-  //new estimate
-  x_ = x_ + (K * y);
-  
-  std::cout<<"KF addition: "<<K*y<<std::endl<<"-------"<<std::endl;
-  
-  long x_size = x_.size();
-  MatrixXd I = MatrixXd::Identity(x_size, x_size);
-  P_ = (I - K * H_) * P_;
+  UpdateInternal(y);
 }
 
+// Update step of extended kalman filter.
+// H matrix is expected to be Jacobian
+// Input measurement is in polar coordinate system
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-   * TODO: update the state by using Extended Kalman Filter equations
-   */
-  
   VectorXd z_pred = VectorXd(3);
   FusionEKF::CartesianToPolar(z_pred, x_);
   
-  // TODO: Refactor this if it doesn't require any changes
   VectorXd y = z - z_pred;
-  //std::cout<<"Y: "<<y<<std::endl<<std::endl;
   y(1) = FusionEKF::NormalizeAngle(y(1));
+  
+  UpdateInternal(y);
+}
+
+// Uses previously calculated error of state vs measurement and calculates required update to state vector X and covariance matrix P.
+void KalmanFilter::UpdateInternal(const VectorXd &y) {
   MatrixXd Ht = H_.transpose();
   MatrixXd S = H_ * P_ * Ht + R_;
   MatrixXd Si = S.inverse();

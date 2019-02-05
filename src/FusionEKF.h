@@ -41,9 +41,6 @@ class FusionEKF {
 
   // previous timestamp
   long long previous_timestamp_;
-
-  // Used for debugging logging
-  int timestep_;
   
   // tool object used to compute Jacobian and RMSE
   Tools tools;
