@@ -33,7 +33,8 @@ class FusionEKF {
   
   static void PolarToCartesian(Eigen::VectorXd& result, const MeasurementPackage &measurement_pack);
   static void CartesianToPolar(Eigen::VectorXd& result, const Eigen::VectorXd& input);
-
+  static float NormalizeAngle(float theta);
+  
  private:
   // check whether the tracking toolbox was initialized or not (first measurement)
   bool is_initialized_;

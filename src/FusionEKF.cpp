@@ -139,9 +139,24 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   //Eigen::VectorXd z = VectorXd(4);
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+    
+//    VectorXd z = VectorXd(4);
+//    PolarToCartesian(z, measurement_pack);
+//    ekf_.H_ = MatrixXd(4, 4);
+//    ekf_.H_ << 1, 0, 0, 0,
+//              0, 1, 0, 0,
+//              0, 0, 1, 0,
+//              0, 0, 0, 1;
+//
+//    ekf_.R_ = MatrixXd(4, 4);
+//    ekf_.R_ << 0.01, 0, 0, 0,
+//              0, 0.01, 0, 0,
+//              0, 0, 1, 0,
+//              0, 0, 0, 1;
+    //ekf_.Update(z);
+    
     ekf_.H_ = tools.CalculateJacobian(ekf_.x_);
     ekf_.R_ = R_radar_;
-    
     ekf_.UpdateEKF(measurement_pack.raw_measurements_);
 
   } else {
@@ -168,9 +183,14 @@ void FusionEKF::PolarToCartesian(Eigen::VectorXd& result, const MeasurementPacka
   float ro_dot = measurement_pack.raw_measurements_[2];
   
   float px = ro*cos(theta);
-  float py = -ro*sin(theta);
+  float py = ro*sin(theta);
   float vx = ro_dot*cos(theta);
-  float vy = -ro_dot*sin(theta);
+  float vy = ro_dot*sin(theta);
+  
+  std::cout<<"PolarToCartesian: "<<std::endl;
+  std::cout<<"ro: "<<ro<<", theta: "<<theta<<", ro_dot: "<<ro_dot<<std::endl;
+  std::cout<<"px: "<<px<<", py: "<<py<<", vx: "<<vx<<", vy: "<<vy<<std::endl;
+  std::cout<<"++++"<<std::endl;
   result << px, py, vx, vy;
 }
 
@@ -183,15 +203,24 @@ void FusionEKF::CartesianToPolar(Eigen::VectorXd& result, const Eigen::VectorXd&
   float ro = sqrt(px*px + py*py);
   float theta = atan2(py,px);
   
+  theta = NormalizeAngle(theta);
+  
+  float ro_dot;
+  if(fabs(ro) < 0.0001) ro_dot = 0;
+  else ro_dot = (px*vx+py*vy)/ro;
+  
+  
+  result << ro,theta,ro_dot;
+}
+
+float FusionEKF::NormalizeAngle(float theta) {
   while (theta > M_PI) {
-    theta -= M_PI;
+    theta -= 2*M_PI;
   }
   
   while(theta < -M_PI) {
-    theta += M_PI;
+    theta += 2*M_PI;
   }
   
-  float ro_dot = (px*vx+py*vy)/ro;
-
-  result << ro,theta,ro_dot;
+  return theta;
 }

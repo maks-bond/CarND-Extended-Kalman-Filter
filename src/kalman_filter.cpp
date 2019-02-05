@@ -1,5 +1,6 @@
 #include "kalman_filter.h"
 #include "FusionEKF.h"
+#include <iostream>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -46,6 +47,9 @@ void KalmanFilter::Update(const VectorXd &z) {
   
   //new estimate
   x_ = x_ + (K * y);
+  
+  std::cout<<"KF addition: "<<K*y<<std::endl<<"-------"<<std::endl;
+  
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   P_ = (I - K * H_) * P_;
@@ -61,6 +65,8 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   
   // TODO: Refactor this if it doesn't require any changes
   VectorXd y = z - z_pred;
+  //std::cout<<"Y: "<<y<<std::endl<<std::endl;
+  y(1) = FusionEKF::NormalizeAngle(y(1));
   MatrixXd Ht = H_.transpose();
   MatrixXd S = H_ * P_ * Ht + R_;
   MatrixXd Si = S.inverse();
@@ -69,6 +75,7 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   
   //new estimate
   x_ = x_ + (K * y);
+  
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   P_ = (I - K * H_) * P_;
